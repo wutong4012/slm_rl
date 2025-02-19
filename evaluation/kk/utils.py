@@ -80,3 +80,11 @@ def load_eval_records(args, subject):
     else:
         records = datasets.load_dataset('K-and-K/knights-and-knaves',data_files=f"{args.split}/{subject}.jsonl")["train"]
     return records
+
+def apply_chat_template(prompt, mode="zero"):
+    if mode=="zero":
+        return f"""<|im_start|>system\nYou are a helpful assistant. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <think> </think> and<answer> </answer> tags, respectively, i.e., <think> reasoning process here </think><answer> answer here </answer>.  Now the user asks you to solve a logical reasoning problem. After thinking, when you finally reach a conclusion, clearly state the identity of each character within <answer> </answer> tags. i.e., <answer> (1) Zoey is a knight\n(2) ... </answer>.\n<|im_end|>\n<|im_start|>user\n{prompt}\n<|im_end|>\n<|im_start|>assistant\n<think>"""
+    elif mode=="normal":
+        return f"""<|im_start|>user\n{prompt}\n<|im_end|>\n<|im_start|>assistant\n"""
+    else:
+        raise NotImplementedError

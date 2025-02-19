@@ -6,8 +6,9 @@ import random
 import torch
 import time
 from dataset.kk import KKProcessor
-from utils import load_eval_records, load_jsonl, write_jsonl, batch_decode_vllm, init_seed, load_llm
+from utils import load_eval_records, load_jsonl, write_jsonl, batch_decode_vllm, init_seed, load_llm, apply_chat_template
 
+from datetime import datetime  # Add this import
 
 
 def eval_subject(args, subject, llm, test_records, kk_proc, exist_result_records):
@@ -24,9 +25,16 @@ def eval_subject(args, subject, llm, test_records, kk_proc, exist_result_records
     prompts = []
     labels = []
     for i in range(start_index, len(test_records)):
+        if args.mode == "zero":
+            prompt = test_records[i]['quiz']
+            prompt = apply_chat_template(prompt)
+            continue
         prompt, label = kk_proc.gen_test_prompt(
-            args.ntrain, test_records, i, args.model
+            args.ntrain, test_records, i
         )
+        if args.mode.startswith("zero"):
+            prompt = test_records[i]['quiz']
+            prompt = apply_chat_template(prompt)
         prompts.append(prompt)
         if i == start_index:
             print(f"Sample prompt:\n{prompt}")
@@ -46,7 +54,7 @@ def eval_subject(args, subject, llm, test_records, kk_proc, exist_result_records
 
     # Process results
     for i, (prompt, label, response) in enumerate(zip(prompts, labels, responses), start=start_index):
-        cor, parsed_pred, reformat_gold_conditions = kk_proc._parse_cot_eval(response, label, args.model)
+        cor, parsed_pred, reformat_gold_conditions = kk_proc._parse_cot_eval(response, label, args.model, args.mode)
 
         if i % 1 == 0:
             print(f"\nPrompt {i}:{prompt}"
@@ -80,6 +88,7 @@ def eval_subject(args, subject, llm, test_records, kk_proc, exist_result_records
     print(f"Total evaluation time: {eval_time:.2f} seconds")
 
     return cors, acc, exist_result_records
+
 
 
 def load_limited_test_records(args, subject, exist_result_records):
@@ -145,9 +154,11 @@ def main(args):
     acc_fname = os.path.join(prefix, f"result_{args.config}.json")
     os.makedirs(output_folder, exist_ok=True)
 
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
     print("args.config", args.config, "\nprefix", prefix, "\noutput_folder", output_folder)
 
-    kk_proc = KKProcessor(cot=args.cot, no_linebreak=args.no_linebreak)
+    kk_proc = KKProcessor(cot=args.cot, no_linebreak=args.no_linebreak, log_dir=output_folder, timestamp=timestamp)
 
     subjects = get_subjects_to_eval(args)
     acc_results = load_previous_acc_results(acc_fname)
@@ -189,6 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="test", choices=["test", "train"], help="Data split to use")
     parser.add_argument("--eval_nppl", type=int, default=0, help="Number of people to evaluate")
     parser.add_argument("--problem_type", type=str, default="clean", help="Problem perturbation type")
+    parser.add_argument("--mode", type=str, default="zero-unified", help="Mode")
 
     args = parser.parse_args()
     init_seed()
