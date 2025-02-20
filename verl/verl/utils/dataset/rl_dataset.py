@@ -137,7 +137,13 @@ class RLHFDataset(Dataset):
 
         chat = row_dict.pop(self.prompt_key)
 
-        prompt_with_chat_template = self.tokenizer.apply_chat_template(chat, add_generation_prompt=True, tokenize=False)
+        apply_chat_template = row_dict.get("extra_info", {}).get("apply_chat_template", True)
+
+        if apply_chat_template:
+            prompt_with_chat_template = self.tokenizer.apply_chat_template(chat, add_generation_prompt=True, tokenize=False)
+        else:
+            assert isinstance(chat, str), "If not applying chat_template, the prompt inside the dataentry should be a string"
+            prompt_with_chat_template = chat
 
         input_ids, attention_mask = verl_F.tokenize_and_postprocess_data(prompt=prompt_with_chat_template,
                                                                          tokenizer=self.tokenizer,
