@@ -172,6 +172,10 @@ def compute_score(solution_str: str,
     print(f"\n  Format validation: {'PASS' if format_correct else 'FAIL'}")
     print(f"  Format score: {format_score}")
 
+    if format_score > 0:
+        format_score_scaled = 1
+    else:
+        format_score_scaled = 0
     # Validate answer content
     answer_score = 0
     if format_correct and answer_text:
@@ -183,15 +187,19 @@ def compute_score(solution_str: str,
             
             if pred_status == gt_status:
                 answer_score = 2
+                answer_score_scaled = 1
                 print("  Content validation: FULL MATCH")
             else:
                 answer_score = -1.5
+                answer_score_scaled = 0
                 print("  Content validation: MISMATCH")
         else:
             answer_score = -2
+            answer_score_scaled = 0
             print( "Fail to parse answer")
     else:
         answer_score = -2
+        answer_score_scaled = 0
         print("\n[Content Validation] Skipped due to format errors or missing answer")
 
     total_score = format_score + answer_score
@@ -201,5 +209,13 @@ def compute_score(solution_str: str,
     print(f"  Answer: {answer_score}")
     print(f"  Total: {total_score}")
     print("="*80 + "\n")
+    
+    output = {
+        "score": total_score,
+        "extra_info": {
+            "outcome_score": answer_score_scaled,
+            "format_score": format_score_scaled
+        }
+    }
 
-    return total_score
+    return output

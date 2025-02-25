@@ -177,6 +177,6 @@ class KKProcessor:
             xml_parse = True
             
         is_correct, pred_answer, wrong_reason, correct_ratio, reformat_gold_conditions = parse_cot_eval(
-            pred_str, ans, conclusion_patterns=conclusion_patterns, verbose=False, xml_parse=xml_parse)
+            pred_str, ans, verbose=False, xml_parse=xml_parse)
 
         return is_correct, pred_answer, reformat_gold_conditions
