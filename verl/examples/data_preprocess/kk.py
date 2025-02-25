@@ -1,3 +1,8 @@
+# ==========================================================
+# Based on code from [Logic-RL] - [https://github.com/Unakar/Logic-RL]
+# Modifications: Use `apply_chat_template` instead of hardcoding.
+# ==========================================================
+
 """ Preprocess dataset for knights and knaves logic task """
 
 import os
@@ -20,9 +25,9 @@ def generate_base_prompt(dp, template_type):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--local_dir', default='/home/t2vg-a100-G4-43/data/kk/instruct/3ppl')
+    parser.add_argument('--local_dir', type=str, required=True)
     parser.add_argument('--hdfs_dir', default=None)
-    parser.add_argument('--data_path', default='/home/t2vg-a100-G4-43/mem-kk-logic/kk_train_data/3ppl.jsonl')
+    parser.add_argument('--data_path', type=str, required=True)
     parser.add_argument('--train_size', type=int, default=900)
     parser.add_argument('--test_size', type=int, default=100)
     parser.add_argument('--template_type', type=str, default='qwen-instruct')
