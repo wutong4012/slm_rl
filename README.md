@@ -41,8 +41,11 @@ Following the setup of [Logic-RL](https://github.com/Unakar/Logic-RL), we run re
 > Therefore, we need to re-evaluate our assumptions.
 > Let's try a different approach one more time
 
-<div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0;">
+<details>
 
+<summary>Complete reasoning trace</summary>
+
+```
 <think> To solve this, let's analyze each statement step by step, considering the implications based on whether the speakers are knights (who always tell the truth) or knaves (who always lie).
 
 1. Sofia says: "Mia is a knave or Aiden is a knight."
@@ -96,8 +99,11 @@ Grace is a knave
 (2) Scarlett is a knight
 (3) Mia is a knight
 (4) Aiden is a knave
-(5) Grace is a knave </answer>
-</div>
+(5) Grace is a knave 
+</answer>
+```
+
+</details>
 
 ---
 
