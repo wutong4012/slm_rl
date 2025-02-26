@@ -62,7 +62,7 @@ if __name__ == '__main__':
             else:
                 prompt = [
                     {
-                        "role": "user",
+                        "role": "system",
                         "content": INSTRUCT_PROMPT
                     },
                     {
