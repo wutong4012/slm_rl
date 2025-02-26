@@ -144,8 +144,8 @@ class KKProcessor:
         return prompt, answer
     
     def _parse_cot_eval(self, pred_str, ans, model_name=None, mode="zero"):
-        if mode == "zero":
-            raise NotImplementedError # This mode is still buggy, use "zero-unified" instead
+        # if mode == "zero":
+            # raise NotImplementedError # This mode is still buggy, use "zero-unified" instead
             # Redirect stdout to capture compute_score's output
         #     original_stdout = sys.stdout
         #     sys.stdout = buffer = io.StringIO()
@@ -173,7 +173,7 @@ class KKProcessor:
             conclusion_patterns = ['boxed{', 'CONCLUSION:', 'Conclusion:', 'conclusion:']
 
         xml_parse = False
-        if mode == "zero-unified":
+        if mode.startswith("zero"):
             xml_parse = True
             
         is_correct, pred_answer, wrong_reason, correct_ratio, reformat_gold_conditions = parse_cot_eval(

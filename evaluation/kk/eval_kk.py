@@ -6,7 +6,7 @@ import random
 import torch
 import time
 from dataset.kk import KKProcessor
-from utils import load_eval_records, load_jsonl, write_jsonl, batch_decode_vllm, init_seed, load_llm, apply_chat_template
+from utils import load_eval_records, load_jsonl, write_jsonl, batch_decode_vllm, init_seed, load_llm, apply_chat_template_hard_code
 
 from datetime import datetime  # Add this import
 
@@ -25,16 +25,46 @@ def eval_subject(args, subject, llm, test_records, kk_proc, exist_result_records
     prompts = []
     labels = []
     for i in range(start_index, len(test_records)):
-        if args.mode == "zero":
-            prompt = test_records[i]['quiz']
-            prompt = apply_chat_template(prompt)
-            continue
+        # if args.mode == "zero":
+        #     prompt = test_records[i]['quiz']
+        #     prompt = apply_chat_template(prompt)
+        #     continue
+        
+        # Legacy code from kk repo that get the formatted prompt
+        # It doesn't apply chat template however
         prompt, label = kk_proc.gen_test_prompt(
             args.ntrain, test_records, i
         )
-        if args.mode.startswith("zero"):
+        if args.mode.startswith("normal"):
+            # Adhere to the same protocol as original kk, but apply template
+            conversation = [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+            prompt = llm.apply_chat_template_auto(conversation)
+
+        elif args.mode.startswith("zero-auto-template"):
+            # Apply to template, but parse like Logic-RL
             prompt = test_records[i]['quiz']
-            prompt = apply_chat_template(prompt)
+            conversation = [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+            # llm class is defined in models.hf
+            prompt = llm.apply_chat_template_auto(conversation)
+                
+        elif args.mode.startswith("zero"): 
+            # Logic-RL configuration. We apply template manually
+            prompt = test_records[i]['quiz']
+            prompt = apply_chat_template_hard_code(prompt)
+            
+        else:
+            raise NotImplementedError
+        
         prompts.append(prompt)
         if i == start_index:
             print(f"Sample prompt:\n{prompt}")
@@ -147,7 +177,7 @@ def main(args):
             model_short_name, args.ntrain))
     )
 
-    args.config += f"_token{args.max_token}{('_cot' if args.cot else '')}" \
+    args.config += f"_token{args.max_token}_t{args.temperature}{('_cot' if args.cot else '')}" \
         f"_{args.split}{('_' + args.problem_type if args.problem_type != 'clean' else '')}"
 
     output_folder = os.path.join(prefix, args.config)
@@ -200,8 +230,14 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="test", choices=["test", "train"], help="Data split to use")
     parser.add_argument("--eval_nppl", type=int, default=0, help="Number of people to evaluate")
     parser.add_argument("--problem_type", type=str, default="clean", help="Problem perturbation type")
-    parser.add_argument("--mode", type=str, default="zero-unified", help="Mode")
-
+    parser.add_argument("--temperature", type=float, default=1.0, help="Temperature for sampling")
+    parser.add_argument("--mode", type=str, default="zero-unified", 
+        help=(
+                "zero is intended to apply chat template of Tiny-Zero and parser "
+                "from Logic-RL. zero-unified use parser from the original kk repo. "
+                "normal apply chat template of qwen. zero-auto-template "
+            )
+    )
     args = parser.parse_args()
     init_seed()
     main(args)

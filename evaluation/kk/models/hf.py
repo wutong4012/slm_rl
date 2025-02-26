@@ -22,11 +22,13 @@ class CasualLM(LLMBase):
         arch=None,
         use_vllm=False,
         max_tokens=2048,
+        temperature=1.0
     ):
         self.arch = arch if arch is not None else model_path
         self.tokenizer_use_fast = True
         self.max_tokens = max_tokens
         self.use_vllm=use_vllm
+        self.temperature=temperature
         super().__init__(model_path=model_path)
 
     def load_model(self, model_path=None):
@@ -37,6 +39,8 @@ class CasualLM(LLMBase):
                 model=model_path,
                 tokenizer=model_path,
                 gpu_memory_utilization=0.9,
+                tensor_parallel_size=int(os.environ.get('TP_SIZE', 1)),
+                max_model_len=int(os.environ.get('MAX_SEQ_LEN', 16000))
             )
 
             self.tokenizer = AutoTokenizer.from_pretrained(self.arch)
@@ -66,11 +70,13 @@ class CasualLM(LLMBase):
     def query(self, prompt):
         return self.query_generation(prompt)
     
+    def apply_chat_template_auto(self, conversation):
+        return self.tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
     @torch.no_grad()
     def query_generation(self, prompt):
         try:
             if self.use_vllm:
-                sampling_params = SamplingParams(max_tokens=self.max_tokens)
+                sampling_params = SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature)
                 outputs = self.model.generate(
                     [prompt], sampling_params,
                 )
