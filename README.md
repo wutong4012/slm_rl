@@ -2,11 +2,12 @@
 
 ## Eliciting Reflection in LLMs with RL
 
-Following the setup of [Logic-RL](https://github.com/Unakar/Logic-RL), we run reinforcement learning on the knights and knaves dataset (5-person configuration) for 380 steps.
+Following the setup of [Logic-RL](https://github.com/Unakar/Logic-RL), we run reinforcement learning on the knights and knaves dataset (5-person configuration) for 380 steps. We can optionally train 40 steps on 7-person configuration to reach SOTA performance.
 
 **Key Differences:**
 - **Logic-RL**: Uses curriculum learning across 2-7 person configurations with REINFORCE++
-- **Our Approach**: Trains exclusively on 5-person configuration with GRPO optimization
+- **Our Approach**: Trains exclusively on 5-person configuration 
+(1/6 of data) with GRPO optimization
 
 ---
 ### Result
@@ -21,9 +22,11 @@ Following the setup of [Logic-RL](https://github.com/Unakar/Logic-RL), we run re
 | Deepseek-Math-7b                                                      | 0.10    | 0.35     | 0.21     | 0.08     | 0.06     | 0.02     | 0.00     | 0.00     |
 | **Qwen2.5-7B-Logic-RL (Reinforce++)**                                  | **0.89** | 0.99     | 0.99     | 0.94     | 0.92     | 0.91     | 0.80     | 0.67     |
 | Qwen2.5-7B-Instruct-1M                                                | 0.26    | 0.64     | 0.39     | 0.33     | 0.21     | 0.13     | 0.03     | 0.08     |
-| **Qwen2.5-7B-GRPO (ours; step 380)**                                  | **0.89** | 0.93     | 0.98     | 0.99     | 0.98     | 0.84     | 0.85     | 0.67     |
+| **Qwen2.5-7B-GRPO (ours; step 380)**                                  | 0.89 | 0.93     | 0.98     | 0.99     | 0.98     | 0.84     | 0.85     | 0.67     |
+| **Qwen2.5-7B-GRPO (ours; step 420)**                                  | **0.92** | 0.93     | 0.98     | 1.00     | 0.98     | 0.90     | 0.85     | 0.79     |
 
-*Note: first 5 results are from [Logic-RL](https://github.com/Unakar/Logic-RL). The last 2 are from our experiments.*
+
+*Note: first 5 results are from [Logic-RL](https://github.com/Unakar/Logic-RL). The last 3 are from our experiments.*
 
 ---
 
@@ -147,8 +150,12 @@ bash run_logicRL_4gpus_phase1.sh
 bash run_logicRL_4gpus_phase2.sh
 ```
 
+You can modify the script to train additional steps on more data to reach better performance.
+
 ### Evaluation
 ```bash
+python python ../verl/scripts/model_merger.py --local_dir ./checkpoints/logic_rl/grpo_run/global_step_380/actor/
+
 bash ../evaluation/kk/scripts/eval/eval_grpo.sh
 ```
 
