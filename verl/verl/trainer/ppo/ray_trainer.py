@@ -872,6 +872,8 @@ class RayPPOTrainer(object):
         # load checkpoint before doing anything
         self._load_checkpoint()
 
+        if self.config.trainer.start_step:
+            self.global_steps = int(self.config.trainer.start_step)
         # perform validation before training
         # currently, we only support validation using the reward_function.
         if self.val_reward_fn is not None and self.config.trainer.get('val_before_train', True):
