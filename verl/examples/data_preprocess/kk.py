@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     apply_chat_template = True
     if args.template_type == "base":
-        apply_chat_template == False
+        apply_chat_template = False
         
     def make_map_fn(split, apply_chat_template):
         def process_fn(example, idx):
