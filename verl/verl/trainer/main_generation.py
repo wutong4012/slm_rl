@@ -18,6 +18,7 @@ import ray
 import numpy as np
 import hydra
 import os
+import importlib
 
 os.environ['NCCL_DEBUG'] = 'WARN'
 os.environ['TOKENIZERS_PARALLELISM'] = 'true'
@@ -45,6 +46,9 @@ def main(config):
     local_path = copy_to_local(config.model.path)
     from verl.utils import hf_tokenizer
     tokenizer = hf_tokenizer(local_path)
+
+    reward_module = importlib.import_module(config.reward_score.module)
+    compute_score = getattr(reward_module, config.reward_score.function)
 
     if config.rollout.temperature == 0.:
         assert config.data.n_samples == 1, 'When temperature=0, n_samples must be 1.'
@@ -120,7 +124,7 @@ def main(config):
         #     output = wg.generate_sequences(data)
         output = wg.generate_sequences(data)
         rollout_n = config.rollout.n
-        max_length = config.rollout.response_length
+
         assert output.batch.batch_size[0] == batch_size * rollout_n, f'output batch size {output.batch.batch_size[0]} != {batch_size} * {rollout_n}'
 
         responses = output.batch["responses"].reshape(batch_size, rollout_n, -1)
@@ -148,6 +152,7 @@ def main(config):
         # print(old_log_probs.shape)
         old_log_probs_lst = old_log_probs.tolist()
         df_sub["old_log_probs"] = old_log_probs_lst
+
         def reshape_list(input_list, batch_size, rollout_n):
             batched_list = []
             index = 0
@@ -171,7 +176,21 @@ def main(config):
         output_text_unpad = []
         for text in output_text:
             output_text_unpad.append(text.replace(pad_token, ''))
-        output_text_unpad_reshape = reshape_list(output_text_unpad, config_batch_size, rollout_n)
+        output_text_unpad_reshape = reshape_list(output_text_unpad, batch_size, rollout_n)
+
+        reward_score = []
+        reward_position = df_sub.columns.get_loc('reward_model')
+
+        for i in range(batch_size):
+
+            ground_truth = df_sub.iloc[i, reward_position]['ground_truth']
+            for j in range(rollout_n):
+                solution_str = output_text_unpad_reshape[i][j]
+                score = compute_score(solution_str, ground_truth)
+                reward_score.append(score)
+        reward_score_reshape = reshape_list(reward_score, batch_size, rollout_n)
+        df_sub["reward_score"] = reward_score_reshape
+
         df_sub["decoded_responses"] = output_text_unpad_reshape
         output_file = os.path.join(config.data.output_dir, f"partition_{start_index}_{end_index}.parquet")
         df_sub.to_parquet(output_file)
