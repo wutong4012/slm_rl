@@ -17,6 +17,14 @@ We first experimented with directly applying RL to elicit reflection, building u
 
 This highlight demonstrates the model's ability to recognize contradictions and adjust its reasoning strategy.
 
+#### Training Dynamics
+
+<p float="left">
+  <img src="docs/pics/training_reward.png" width="30%" />
+  <img src="docs/pics/validation_reward.png" width="30%" /> 
+  <img src="docs/pics/response_length.png" width="37%" />
+</p>
+
 <details>
 <summary>Detailed Results and Reproduction Instructions</summary>
 
@@ -38,16 +46,6 @@ This highlight demonstrates the model's ability to recognize contradictions and 
 
 
 *Note: first 5 results are from [Logic-RL](https://github.com/Unakar/Logic-RL). The last 4 are from our experiments.*
-
----
-
-#### Training Dynamics
-
-<p float="left">
-  <img src="docs/pics/training_reward.png" width="30%" />
-  <img src="docs/pics/validation_reward.png" width="30%" /> 
-  <img src="docs/pics/response_length.png" width="37%" />
-</p>
 
 ---
 <details>
