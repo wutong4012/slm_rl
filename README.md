@@ -1,15 +1,25 @@
-# Reinforcement Learning Research Repo
+# Reinforcement Learning Research Repo: Eliciting Reflection in LLMs
+
+This repository explores methods for eliciting reflection in Large Language Models (LLMs) using Reinforcement Learning (RL), with a focus on the Knights and Knaves (KK) logic puzzle dataset.  We investigate both direct RL training and a distillation-based approach for smaller models.
+
+---
 
 ## Eliciting Reflection in LLMs with RL
 
-We first experiment with eliciting reflection in LLMs directly with reinforcement learning. Following the setup of [Logic-RL](https://github.com/Unakar/Logic-RL), we chose knights and knaves (KK) dataset. We run GRPO algorithm on the 5-person configuration of the kk dataset (800 entries) for 380 steps.
+We first experimented with directly applying RL to elicit reflection, building upon the work of [Logic-RL](https://github.com/Unakar/Logic-RL). We used the GRPO algorithm on the 5-person configuration of the KK dataset.  While Logic-RL employs curriculum learning across various configurations, our approach focuses primarily on the 5-person setting.
 
+**Key Result:** Our GRPO-trained Qwen2.5-7B model achieves comparable performance to Logic-RL's REINFORCE++ trained model, demonstrating the effectiveness of GRPO in this setting.  Further training (step 420) leads to even better overall average performance.
 
-**Some Differences:**
-- **Logic-RL**: Uses curriculum learning across 2-7 person configurations with REINFORCE++ (a variant of Policy Gradient)
-- **Our Approach**: Trains exclusively on 5-person configuration (1/6 of data) with GRPO algorithm (yet another variant of Policy Gradient). We can optionally train 40 steps on 7-person configuration to reach SOTA performance.
+**Aha Moment (different from R1!)**
+**Highlight**
+> Therefore, we need to re-evaluate our assumptions.
+> Let's try a different approach one more time
 
----
+This highlight demonstrates the model's ability to recognize contradictions and adjust its reasoning strategy.
+
+<details>
+<summary>Detailed Results and Reproduction Instructions</summary>
+
 ### Result
 
 #### Benchmark
@@ -40,12 +50,6 @@ We first experiment with eliciting reflection in LLMs directly with reinforcemen
 </p>
 
 ---
-
-#### Aha Moment (different from R1!)
-**Highlight**  
-> Therefore, we need to re-evaluate our assumptions.
-> Let's try a different approach one more time
-
 <details>
 
 <summary>Complete reasoning trace</summary>
@@ -115,13 +119,14 @@ Grace is a knave
 ### Reproduction Instructions
 
 #### Setup
-1. Obtain model and dataset:
-    1. Obtain `Qwen/Qwen2.5-7B-Instruct-1M` and place it in:  
+1.  Obtain model and dataset:
+    1.  Obtain `Qwen/Qwen2.5-7B-Instruct-1M` and place it in:
     `experiments/models/Qwen2.5-7B-Instruct-1M`
-    2. Download the knights-and-knaves dataset from [HF Datasets](https://huggingface.co/datasets/K-and-K/knights-and-knaves) and place it in:  
+    2.  Download the knights-and-knaves dataset from [HF Datasets](https://huggingface.co/datasets/K-and-K/knights-and-knaves) and place it in:
     `experiments/raw/knights-and-knaves`
 
-2. Create environment:
+2.  Create the environment:
+
    ```bash
    conda create -n verl python==3.9
    conda activate verl
@@ -130,7 +135,6 @@ Grace is a knave
    git clone https://github.com/volcengine/verl.git
    cd verl && pip3 install -e .
    ```
-
 #### Preprocessing
 ```bash
 cd experiments
@@ -140,37 +144,39 @@ python ../verl/examples/data_preprocess/kk.py \
 ```
 
 #### Training
-**Phase 1 (For 100 steps):**  
-*Parameters: rollout.n=8, rollout.temperature=1.0*
+**Phase 1 (For 100 steps):**
 ```bash
 bash run_logicRL_4gpus_phase1.sh
 ```
 
-**Phase 2 (Additional 280 steps):**  
-*Parameters updated: rollout.n=16, rollout.temperature=1.3*
+**Phase 2 (Additional 280 steps):**
 ```bash
 bash run_logicRL_4gpus_phase2.sh
 ```
-
 You can modify the script to train additional steps on more data to reach better performance.
 
-### Evaluation
+#### Evaluation
 ```bash
 python ../verl/scripts/model_merger.py --local_dir ./checkpoints/logic_rl/grpo_run/global_step_380/actor/
 
 bash ../evaluation/kk/scripts/eval/eval_grpo.sh
 ```
+</details>
 
+---
 
 ## Eliciting Reflection in small LMs with Distillation followed by RL
 
-It was discussed in a lot of literature that it was hard to perform R1-Zero like RL on small LMs. Distillation (imitation learning) was considered as a viable alternative. To this end, we reproduce the success of R1-Distill series models on the knights and knaves dataset.
+Direct RL training on smaller LLMs (e.g., Qwen2.5-1.5B) proved challenging, often leading to model collapse.  We therefore investigated a distillation-based approach, first distilling knowledge from our larger, RL-trained Qwen2.5-7B model into the smaller Qwen2.5-1.5B model, and then applying RL to the distilled model.
+
+**Key Result:** Distillation significantly improved the performance of the smaller model, allowing it to exhibit reflection patterns similar to the teacher model.  Furthermore, applying RL *after* distillation ("cold starting") led to performance comparable to the 7B model, demonstrating the effectiveness of this combined approach.
+
+<details>
+<summary>Detailed Results and Reproduction Instructions</summary>
 
 ### Unfruitful attemp: Direct RL on Qwen2.5-1.5B-Insturct
 
-We first attempted to train Qwen2.5-1.5B-Instruct model with GRPO algorithm. However, despite our best efforts to tune the hyperparameters, the model collapsed. 
-
-For our run with temperature `t=1.0`, the model converged to a policy kept putting dummy message like `"this is thinking process"` inside the `<think></think>` block. This behavior is also reported in many reproductions of R1-Zero.
+Direct application of GRPO to Qwen2.5-1.5B-Instruct resulted in model collapse, with the model overfitting and generating dummy responses.
 
 <p float="left">
   <img src="docs/pics/small_training_outcome_score.png" width="32%" alt="Training accuracy" />
@@ -178,18 +184,13 @@ For our run with temperature `t=1.0`, the model converged to a policy kept putti
   <img src="docs/pics/small_response_length.png" width="32%" alt="Response length" />
 </p>
 
-As shown in the figures above, the model overfits to the training data and fails to generalize to the validation data.  The response length converged to a low value. The model effectively hacked the format reward.
-
 ### Eliciting Reflection with Distillation for Small LMs
-
-We then study if it is possible to distill our RL-trained Qwen2.5-7B-GRPO model into a smaller model. We chose the Qwen2.5-7B-GRPO checkpoint at step 380 as the teacher. For each data in the training set (total 900 entires), we sample 5 times from the teacher model (temperature=1.0). We perform rejection sampling and kept one of the correct samples. This results in a dataset of 899 entries. We then train the Qwen2.5-1.5B-Instruct model on this dataset with a cross-entropy loss. The training is stable. We observe a significant drop in both training and validation loss during the first epoch. We trained for 4 epochs.
+We distilled the trained Qwen2.5-7B-GRPO model into Qwen2.5-1.5B-Instruct. This was done by sampling solutions from teacher model. The training was stable and the distilled model showed improved accuracy, though lower than teacher.
 
 <p float="left">
   <img src="docs/pics/small_training_loss.png" width="49%" alt="Training loss" />
   <img src="docs/pics/small_validation_loss.png" width="49%" alt="Validation loss" />
 </p>
-
-After distillation, the small distilled model exhibits the same answering behavior as the teacher model. We can observe patterns like re-evaluation and backtracking in the distilled model. It achieves a higher accuracy to baseline Instruct models (of much larger size), though it is still lower than the RL-trained model.
 
 | **Model**                                                             | **Avg** | **2ppl** | **3ppl** | **4ppl** | **5ppl** | **6ppl** | **7ppl** | **8ppl** |
 |-----------------------------------------------------------------------|---------|----------|----------|----------|----------|----------|----------|----------|
@@ -197,25 +198,21 @@ After distillation, the small distilled model exhibits the same answering behavi
 | **Qwen2.5-1.5B-Instruct-Distill (ours; 4 epoch)**                     | 0.47 | 0.56     | 0.80     | 0.72     | 0.45     | 0.35     | 0.22     | 0.16     |
 | **Qwen2.5-7B-GRPO (ours; step 380)**                                  | 0.89 | 0.93     | 0.98     | 0.99     | 0.98     | 0.84     | 0.85     | 0.67     |
 
-To our surprise, the distilled model performs much better at 3ppl problems compared to 2ppl problems that are thought to be easier. This might suggests limitations in generalization of the distilled model.
-
 #### Reproduction Instructions
-
-To prepare the distillation dataset, first run the distillation script to generate rollout from the teacher model.
-```
+To prepare the dataset, first generate rollout from the teacher.
+```bash
 bash distill_from_7b.sh
 ```
+Then prepare sft data. You may then nevigate to `notebooks/prepare_sft.ipynb` to prepare the sft dataset.
 
-You may then nevigate to `notebooks/prepare_sft.ipynb` to prepare the sft dataset.
-
-To train the distilled model, run the following script:
-```
+To train the distilled model, run
+```bash
 bash run_kk_sft_with_distillation_4gpus.sh
 ```
 
 ### Cold Starting RL on the Distilled Model
 
-We performed GRPO on the distilled model. Since the model is smaller, we set rollout number to 32 to utilize our hardware. The temperature was set to 1.0 as we noticed in our earlier attempts that the smaller model tends to be incoherent at higher temperature. The training was stable. At step 360, the small 1.5B model reaches a performance comparable to the 7B model.
+We applied GRPO to the distilled model, resulting in stable training and performance comparable to the 7B model.
 
 <p float="left">
   <img src="docs/pics/small_cold_training_outcome_score.png" width="32%" alt="Training accuracy" />
@@ -232,12 +229,13 @@ We performed GRPO on the distilled model. Since the model is smaller, we set rol
 
 #### Reproduction Instructions
 
-To perform RL on the distilled model, run the following script:
-```
+To perform RL on the distilled model.
+```bash
 bash run_logicRL_cold_4gpus.sh
 ```
----
+</details>
 
+---
 ## Acknowledgements
 - [Verl Framework](https://github.com/volcengine/verl)
 - [TinyZero](https://github.com/Jiayi-Pan/TinyZero)
@@ -246,6 +244,4 @@ bash run_logicRL_cold_4gpus.sh
 
 ---
 
-*Note: Requires modified verl framework from this repository*
-
-*For our models, we sampled once at temperature=1.0. For baseline Instruct models, we sampled at temperature=0.0. For baseline DeepSeek models, we sampled once at temperature=0.6.*
+*Note: Requires modified verl framework from this repository.  Sampling details for different models are provided in the detailed sections.*
