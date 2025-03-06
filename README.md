@@ -156,7 +156,7 @@ You can modify the script to train additional steps on more data to reach better
 
 ### Evaluation
 ```bash
-python python ../verl/scripts/model_merger.py --local_dir ./checkpoints/logic_rl/grpo_run/global_step_380/actor/
+python ../verl/scripts/model_merger.py --local_dir ./checkpoints/logic_rl/grpo_run/global_step_380/actor/
 
 bash ../evaluation/kk/scripts/eval/eval_grpo.sh
 ```
@@ -199,6 +199,20 @@ After distillation, the small distilled model exhibits the same answering behavi
 
 To our surprise, the distilled model performs much better at 3ppl problems compared to 2ppl problems that are thought to be easier. This might suggests limitations in generalization of the distilled model.
 
+#### Reproduction Instructions
+
+To prepare the distillation dataset, first run the distillation script to generate rollout from the teacher model.
+```
+bash distill_from_7b.sh
+```
+
+You may then nevigate to `notebooks/prepare_sft.ipynb` to prepare the sft dataset.
+
+To train the distilled model, run the following script:
+```
+bash run_kk_sft_with_distillation_4gpus.sh
+```
+
 ### Cold Starting RL on the Distilled Model
 
 We performed GRPO on the distilled model. Since the model is smaller, we set rollout number to 32 to utilize our hardware. The temperature was set to 1.0 as we noticed in our earlier attempts that the smaller model tends to be incoherent at higher temperature. The training was stable. At step 360, the small 1.5B model reaches a performance comparable to the 7B model.
@@ -216,6 +230,12 @@ We performed GRPO on the distilled model. Since the model is smaller, we set rol
 | **Qwen2.5-7B-GRPO (ours; step 380)**                                  | 0.89 | 0.93     | 0.98     | 0.99     | 0.98     | 0.84     | 0.85     | 0.67     |
 | **Qwen2.5-1.5B-Instruct-Distill-GRPO (ours; step 360)**               | 0.89 | 1.0     | 0.99     | 0.99     | 0.96     | 0.93     | 0.68     | 0.69     |
 
+#### Reproduction Instructions
+
+To perform RL on the distilled model, run the following script:
+```
+bash run_logicRL_cold_4gpus.sh
+```
 ---
 
 ## Acknowledgements
