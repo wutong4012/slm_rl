@@ -32,11 +32,12 @@ We first experiment with eliciting reflection in LLMs directly with reinforcemen
 ---
 
 #### Training Dynamics
-<div style="display: flex; gap: 10px; overflow: auto; padding: 10px;">
-  <img src="docs/pics/training_reward.png" style="height: 300px; flex-shrink: 0;">
-  <img src="docs/pics/validation_reward.png" style="height: 300px; flex-shrink: 0;">
-  <img src="docs/pics/response_length.png" style="height: 300px; flex-shrink: 0;">
-</div>
+
+<p float="left">
+  <img src="docs/pics/training_reward.png" width="30%" />
+  <img src="docs/pics/validation_reward.png" width="30%" /> 
+  <img src="docs/pics/response_length.png" width="37%" />
+</p>
 
 ---
 
@@ -171,45 +172,22 @@ We first attempted to train Qwen2.5-1.5B-Instruct model with GRPO algorithm. How
 
 For our run with temperature `t=1.0`, the model converged to a policy kept putting dummy message like `"this is thinking process"` inside the `<think></think>` block. This behavior is also reported in many reproductions of R1-Zero.
 
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <!-- Figure 1 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_training_outcome_score.png" alt="Figure 1" style="width: 100%;">
-    <figcaption>Training accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 2 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_validation_outcome_score.png" alt="Figure 2" style="width: 100%;">
-    <figcaption>Validation accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 3 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_response_length.png" alt="Figure 3" style="width: 100%;">
-    <figcaption>Response length</figcaption>
-  </figure>
-</div>
+<p float="left">
+  <img src="docs/pics/small_training_outcome_score.png" width="32%" alt="Training accuracy" />
+  <img src="docs/pics/small_validation_outcome_score.png" width="32%" alt="Validation accuracy" />
+  <img src="docs/pics/small_response_length.png" width="32%" alt="Response length" />
+</p>
 
 As shown in the figures above, the model overfits to the training data and fails to generalize to the validation data.  The response length converged to a low value. The model effectively hacked the format reward.
 
-### Eliciting Reflection with Distillation
+### Eliciting Reflection with Distillation for Small LMs
 
 We then study if it is possible to distill our RL-trained Qwen2.5-7B-GRPO model into a smaller model. We chose the Qwen2.5-7B-GRPO checkpoint at step 380 as the teacher. For each data in the training set (total 900 entires), we sample 5 times from the teacher model (temperature=1.0). We perform rejection sampling and kept one of the correct samples. This results in a dataset of 899 entries. We then train the Qwen2.5-1.5B-Instruct model on this dataset with a cross-entropy loss. The training is stable. We observe a significant drop in both training and validation loss during the first epoch. We trained for 4 epochs.
 
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <!-- Figure 1 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_training_loss.png" alt="Figure 1" style="width: 100%;">
-    <figcaption>Training loss</figcaption>
-  </figure>
-
-  <!-- Figure 2 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_validation_loss.png" alt="Figure 2" style="width: 100%;">
-    <figcaption>Validation loss</figcaption>
-  </figure>
-</div>
+<p float="left">
+  <img src="docs/pics/small_training_loss.png" width="49%" alt="Training loss" />
+  <img src="docs/pics/small_validation_loss.png" width="49%" alt="Validation loss" />
+</p>
 
 After distillation, the small distilled model exhibits the same answering behavior as the teacher model. We can observe patterns like re-evaluation and backtracking in the distilled model. It achieves a higher accuracy to baseline Instruct models (of much larger size), though it is still lower than the RL-trained model.
 
@@ -225,26 +203,11 @@ To our surprise, the distilled model performs much better at 3ppl problems compa
 
 We performed GRPO on the distilled model. Since the model is smaller, we set rollout number to 32 to utilize our hardware. The temperature was set to 1.0 as we noticed in our earlier attempts that the smaller model tends to be incoherent at higher temperature. The training was stable. At step 360, the small 1.5B model reaches a performance comparable to the 7B model.
 
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <!-- Figure 1 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_cold_training_outcome_score.png" alt="Figure 1" style="width: 100%;">
-    <figcaption>Training accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 2 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_cold_validation_outcome_score.png" alt="Figure 2" style="width: 100%;">
-    <figcaption>Validation Accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 3 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_cold_response_length.png" alt="Figure 3" style="width: 100%;">
-    <figcaption>Response Length</figcaption>
-  </figure>
-</div>
-
+<p float="left">
+  <img src="docs/pics/small_cold_training_outcome_score.png" width="32%" alt="Training accuracy" />
+  <img src="docs/pics/small_cold_validation_outcome_score.png" width="32%" alt="Validation accuracy" />
+  <img src="docs/pics/small_cold_response_length.png" width="32%" alt="Response length" />
+</p>
 
 | **Model**                                                             | **Avg** | **2ppl** | **3ppl** | **4ppl** | **5ppl** | **6ppl** | **7ppl** | **8ppl** |
 |-----------------------------------------------------------------------|---------|----------|----------|----------|----------|----------|----------|----------|
