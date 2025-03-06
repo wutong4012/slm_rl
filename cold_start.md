@@ -1,14 +1,6 @@
-# Reinforcement Learning Research Repo
-
 ## Eliciting Reflection in LLMs with RL
 
-We first experiment with eliciting reflection in LLMs directly with reinforcement learning. Following the setup of [Logic-RL](https://github.com/Unakar/Logic-RL), we chose knights and knaves (KK) dataset. We run GRPO algorithm on the 5-person configuration of the kk dataset (800 entries) for 380 steps.
-
-
-**Some Differences:**
-- **Logic-RL**: Uses curriculum learning across 2-7 person configurations with REINFORCE++ (a variant of Policy Gradient)
-- **Our Approach**: Trains exclusively on 5-person configuration (1/6 of data) with GRPO algorithm (yet another variant of Policy Gradient). We can optionally train 40 steps on 7-person configuration to reach SOTA performance.
-
+In our previous exploration, we sucessfully performed rule-based RL on Qwen2.5-7B-Instruct-1M. We were able to see a rise in reflection patterns. It almost saturated the benchmark. We are curious to explore if 
 ---
 ### Result
 
@@ -159,99 +151,6 @@ python python ../verl/scripts/model_merger.py --local_dir ./checkpoints/logic_rl
 
 bash ../evaluation/kk/scripts/eval/eval_grpo.sh
 ```
-
-
-## Eliciting Reflection in small LMs with Distillation followed by RL
-
-It was discussed in a lot of literature that it was hard to perform R1-Zero like RL on small LMs. Distillation (imitation learning) was considered as a viable alternative. To this end, we reproduce the success of R1-Distill series models on the knights and knaves dataset.
-
-### Unfruitful attemp: Direct RL on Qwen2.5-1.5B-Insturct
-
-We first attempted to train Qwen2.5-1.5B-Instruct model with GRPO algorithm. However, despite our best efforts to tune the hyperparameters, the model collapsed. 
-
-For our run with temperature `t=1.0`, the model converged to a policy kept putting dummy message like `"this is thinking process"` inside the `<think></think>` block. This behavior is also reported in many reproductions of R1-Zero.
-
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <!-- Figure 1 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_training_outcome_score.png" alt="Figure 1" style="width: 100%;">
-    <figcaption>Training accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 2 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_validation_outcome_score.png" alt="Figure 2" style="width: 100%;">
-    <figcaption>Validation accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 3 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_response_length.png" alt="Figure 3" style="width: 100%;">
-    <figcaption>Response length</figcaption>
-  </figure>
-</div>
-
-As shown in the figures above, the model overfits to the training data and fails to generalize to the validation data.  The response length converged to a low value. The model effectively hacked the format reward.
-
-### Eliciting Reflection with Distillation
-
-We then study if it is possible to distill our RL-trained Qwen2.5-7B-GRPO model into a smaller model. We chose the Qwen2.5-7B-GRPO checkpoint at step 380 as the teacher. For each data in the training set (total 900 entires), we sample 5 times from the teacher model (temperature=1.0). We perform rejection sampling and kept one of the correct samples. This results in a dataset of 899 entries. We then train the Qwen2.5-1.5B-Instruct model on this dataset with a cross-entropy loss. The training is stable. We observe a significant drop in both training and validation loss during the first epoch. We trained for 4 epochs.
-
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <!-- Figure 1 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_training_loss.png" alt="Figure 1" style="width: 100%;">
-    <figcaption>Training loss</figcaption>
-  </figure>
-
-  <!-- Figure 2 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_validation_loss.png" alt="Figure 2" style="width: 100%;">
-    <figcaption>Validation loss</figcaption>
-  </figure>
-</div>
-
-After distillation, the small distilled model exhibits the same answering behavior as the teacher model. We can observe patterns like re-evaluation and backtracking in the distilled model. It achieves a higher accuracy to baseline Instruct models (of much larger size), though it is still lower than the RL-trained model.
-
-| **Model**                                                             | **Avg** | **2ppl** | **3ppl** | **4ppl** | **5ppl** | **6ppl** | **7ppl** | **8ppl** |
-|-----------------------------------------------------------------------|---------|----------|----------|----------|----------|----------|----------|----------|
-| **Qwen25-7B-Instruct-1M**                                              | 0.26 | 0.64     | 0.39     | 0.33     | 0.21     | 0.13     | 0.03     | 0.08     |
-| **Qwen2.5-1.5B-Instruct-Distill (ours; 4 epoch)**                     | 0.47 | 0.56     | 0.80     | 0.72     | 0.45     | 0.35     | 0.22     | 0.16     |
-| **Qwen2.5-7B-GRPO (ours; step 380)**                                  | 0.89 | 0.93     | 0.98     | 0.99     | 0.98     | 0.84     | 0.85     | 0.67     |
-
-To our surprise, the distilled model performs much better at 3ppl problems compared to 2ppl problems that are thought to be easier. This might suggests limitations in generalization of the distilled model.
-
-### Cold Starting RL on the Distilled Model
-
-We performed GRPO on the distilled model. Since the model is smaller, we set rollout number to 32 to utilize our hardware. The temperature was set to 1.0 as we noticed in our earlier attempts that the smaller model tends to be incoherent at higher temperature. The training was stable. At step 360, the small 1.5B model reaches a performance comparable to the 7B model.
-
-<div style="display: flex; justify-content: space-between; gap: 10px;">
-  <!-- Figure 1 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_cold_training_outcome_score.png" alt="Figure 1" style="width: 100%;">
-    <figcaption>Training accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 2 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_cold_validation_outcome_score.png" alt="Figure 2" style="width: 100%;">
-    <figcaption>Validation Accuracy</figcaption>
-  </figure>
-
-  <!-- Figure 3 -->
-  <figure style="flex: 1; margin: 0; text-align: center;">
-    <img src="docs/pics/small_cold_response_length.png" alt="Figure 3" style="width: 100%;">
-    <figcaption>Response Length</figcaption>
-  </figure>
-</div>
-
-
-| **Model**                                                             | **Avg** | **2ppl** | **3ppl** | **4ppl** | **5ppl** | **6ppl** | **7ppl** | **8ppl** |
-|-----------------------------------------------------------------------|---------|----------|----------|----------|----------|----------|----------|----------|
-| **Qwen25-7B-Instruct-1M**                                              | 0.26 | 0.64     | 0.39     | 0.33     | 0.21     | 0.13     | 0.03     | 0.08     |
-| **Qwen2.5-1.5B-Instruct-Distill (ours; 4 epoch)**                     | 0.47 | 0.56     | 0.80     | 0.72     | 0.45     | 0.35     | 0.22     | 0.16     |
-| **Qwen2.5-7B-GRPO (ours; step 380)**                                  | 0.89 | 0.93     | 0.98     | 0.99     | 0.98     | 0.84     | 0.85     | 0.67     |
-| **Qwen2.5-1.5B-Instruct-Distill-GRPO (ours; step 360)**               | 0.89 | 1.0     | 0.99     | 0.99     | 0.96     | 0.93     | 0.68     | 0.69     |
 
 ---
 
