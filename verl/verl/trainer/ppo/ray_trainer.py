@@ -272,6 +272,8 @@ def compute_data_metrics(batch, use_critic=True):
             torch.max(valid_adv).detach().item(),
         'critic/advantages/min':
             torch.min(valid_adv).detach().item(),
+        'critic/advantages/zero':
+            (torch.sum(valid_adv == 0) / len(valid_adv)).detach().item(),
         # returns
         'critic/returns/mean':
             torch.mean(valid_returns).detach().item(),
@@ -373,7 +375,7 @@ class RayPPOTrainer(object):
 
         self.role_worker_mapping = role_worker_mapping
         self.resource_pool_manager = resource_pool_manager
-        self.use_reference_policy = Role.RefPolicy in role_worker_mapping
+        self.use_reference_policy = (Role.RefPolicy in role_worker_mapping) and (self.config.actor_rollout_ref.actor.use_kl_loss)
         self.use_rm = Role.RewardModel in role_worker_mapping
         self.ray_worker_group_cls = ray_worker_group_cls
 
@@ -608,6 +610,7 @@ class RayPPOTrainer(object):
         sample_inputs = []
         sample_outputs = []
         sample_scores = []
+        self.config.writer.eval_step = self.global_steps
 
         for test_data in self.val_dataloader:
             test_batch = DataProto.from_single_dict(test_data)
@@ -645,7 +648,9 @@ class RayPPOTrainer(object):
             test_batch = test_batch.union(test_output_gen_batch)
 
             # evaluate using reward_function
-            reward_result = self.val_reward_fn(test_batch)
+            self.config.writer.enable = True
+            reward_result = self.val_reward_fn(test_batch, config=self.config)
+            self.config.writer.enable = False
 
             # Handle both scalar and dictionary returns
             if isinstance(reward_result, dict):
@@ -926,7 +931,7 @@ class RayPPOTrainer(object):
                             gen_baseline_output = self.actor_rollout_wg.generate_sequences(gen_baseline_batch)
 
                             batch = batch.union(gen_baseline_output)
-                            reward_baseline_tensor = self.reward_fn(batch)
+                            reward_baseline_tensor = self.reward_fn(batch, config=self.config)
                             reward_baseline_tensor = reward_baseline_tensor.sum(dim=-1)
 
                             batch.pop(batch_keys=list(gen_baseline_output.batch.keys()))
@@ -976,7 +981,7 @@ class RayPPOTrainer(object):
                             batch = batch.union(reward_tensor)
 
                         # we combine with rule-based rm
-                        reward_result = self.reward_fn(batch)
+                        reward_result = self.reward_fn(batch, config=self.config)
                         extra_rewards_info = None
                         if isinstance(reward_result, dict):
                             batch.batch['token_level_scores'] = reward_result['reward_tensor']
@@ -985,7 +990,7 @@ class RayPPOTrainer(object):
                         else:
                             batch.batch['token_level_scores'] = reward_result
                         # compute rewards. apply_kl_penalty if available
-                        if not self.config.actor_rollout_ref.actor.get('use_kl_loss', False):
+                        if self.config.actor_rollout_ref.actor.get('use_kl_loss', False):
                             batch, kl_metrics = apply_kl_penalty(batch,
                                                                  kl_ctrl=self.kl_ctrl,
                                                                  kl_penalty=self.config.algorithm.kl_penalty)

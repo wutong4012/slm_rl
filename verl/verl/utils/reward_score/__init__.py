@@ -14,7 +14,7 @@
 # from . import gsm8k, math, prime_math, prime_code
 
 
-def _default_compute_score(data_source, solution_str, ground_truth, extra_info=None):
+def _default_compute_score(data_source, solution_str, ground_truth, config, valid_response_length, extra_info=None):
     """Default reward computation function.
     
     Returns:
@@ -24,8 +24,14 @@ def _default_compute_score(data_source, solution_str, ground_truth, extra_info=N
         from . import gsm8k
         res = gsm8k.compute_score(solution_str, ground_truth)
     elif 'kk' in data_source:
-        from .import kk
-        res = kk.compute_score(solution_str, ground_truth)
+        # from .import kk
+        # from .import kk_new as kk
+        # from .import kk_verify as kk
+        from . import kk_pure as kk
+        res = kk.compute_score(solution_str, ground_truth, config=config, valid_response_length=valid_response_length)
+    elif 'orz' in data_source:
+        from . import orz
+        res = orz.compute_score(solution_str, ground_truth, config=config, valid_response_length=valid_response_length)
     elif data_source in ['lighteval/MATH', 'DigitalLearningGmbH/MATH-lighteval']:
         from . import math
         res = math.compute_score(solution_str, ground_truth)

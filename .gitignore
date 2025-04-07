@@ -5,7 +5,7 @@
 *.jsonl
 
 # Ignore shell scripts
-*.sh
+# *.sh
 
 # Ignore log
 *.log
@@ -16,14 +16,14 @@
 # Ignore __pycache__ directories
 __pycache__/
 
-experiments/checkpoints/*
+experiments/checkpoints
 
-experiments/data
+experiments/logic_rl-kk_logs
+
+experiments/logic_rl-orz_logs
 
 experiments/dataset
 
 experiments/raw
-
-experiments/wandb
 
 experiments/outputs

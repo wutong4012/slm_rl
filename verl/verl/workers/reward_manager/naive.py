@@ -28,7 +28,7 @@ class NaiveRewardManager:
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or _default_compute_score
 
-    def __call__(self, data: DataProto) -> Union[torch.Tensor, dict]:
+    def __call__(self, data: DataProto, config) -> Union[torch.Tensor, dict]:
         """We will expand this function gradually based on the available datasets"""
 
         # If there is rm score, we directly return rm score. Otherwise, we compute via rm_score_fn
@@ -65,6 +65,8 @@ class NaiveRewardManager:
                 data_source=data_source,
                 solution_str=sequences_str,
                 ground_truth=ground_truth,
+                config=config,
+                valid_response_length=valid_response_length,
                 extra_info=extra_info,
             )
 

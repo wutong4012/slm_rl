@@ -371,23 +371,27 @@ def generate_wrong_cot_data(num_samples_test, num_samples_train, num_samples_val
             item_start_idx+=num_samples
 
 #### main & leaf/statement perturbed generation 
-for n_people in [2]:
-    generate_data(num_samples_test=100,num_samples_train=200,num_samples_val=0,
-                    n_people=n_people)
+# for n_people in [2]:
+#     generate_data(num_samples_test=100,num_samples_train=200,num_samples_val=0,
+#                     n_people=n_people)
 
-for n_people in [3, 4,5,6,7,8]:
-    generate_data(num_samples_test=100,num_samples_train=1000,num_samples_val=0,
-                    n_people=n_people)
-
-
-#### LANAGUGE perturbation
-for n_people in [2]:
-    generate_data_language_perturb(num_samples_test=100,num_samples_train=200,num_samples_val=0,
-                    n_people=n_people)
+# for n_people in [3, 4,5,6,7,8]:
+#     generate_data(num_samples_test=100,num_samples_train=1000,num_samples_val=0,
+#                     n_people=n_people)
 
 
-for n_people in [3, 4,5,6,7,8]:
-    generate_data_language_perturb(num_samples_test=100,num_samples_train=1000,num_samples_val=0,
+# #### LANAGUGE perturbation
+# for n_people in [2]:
+#     generate_data_language_perturb(num_samples_test=100,num_samples_train=200,num_samples_val=0,
+#                     n_people=n_people)
+
+
+# for n_people in [3, 4,5,6,7,8]:
+#     generate_data_language_perturb(num_samples_test=100,num_samples_train=1000,num_samples_val=0,
+#                     n_people=n_people)
+
+for n_people in [3,]:
+    generate_data(num_samples_test=100,num_samples_train=10000,num_samples_val=0,
                     n_people=n_people)
 
 

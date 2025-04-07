@@ -125,9 +125,13 @@ Grace is a knave
 #### Preprocessing
 ```bash
 cd experiments
-python ../verl/examples/data_preprocess/kk.py \
-  --local_dir ./dataset/kk/instruct/5ppl \
-  --data_path ./raw/knights-and-knaves/train/people5_num1000.jsonl
+python ../verl/examples/data_preprocess/orz.py \
+  --local_dir ./dataset/orz \
+  --data_path /home/wutong/data/reft-exp/evaluation/kk/data/train/clean/people3_num10000.jsonl \
+  --template_type base \
+  --train_size 9900
+  # --data_path ./raw/knights-and-knaves/train/people3_num1000.jsonl \
+  # --template_type base
 ```
 
 #### Training

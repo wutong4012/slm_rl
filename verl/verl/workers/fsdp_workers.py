@@ -103,7 +103,7 @@ class ActorRolloutRefWorker(Worker):
 
         self._is_actor = self.role in ['actor', 'actor_rollout', 'actor_rollout_ref']
         self._is_rollout = self.role in ['rollout', 'actor_rollout', 'actor_rollout_ref']
-        self._is_ref = self.role in ['ref', 'actor_rollout_ref']
+        self._is_ref = (self.role in ['ref', 'actor_rollout_ref']) and (self.config.actor.use_kl_loss)
 
         self._is_offload_param = False
         self._is_offload_optimizer = False
@@ -265,20 +265,28 @@ class ActorRolloutRefWorker(Worker):
 
         # TODO: add more optimizer args into config
         if role == 'actor':
-            from verl.utils.torch_functional import get_constant_schedule_with_warmup
+            from verl.utils.torch_functional import get_constant_schedule_with_warmup, get_cosine_schedule_with_warmup
             actor_optimizer = optim.AdamW(actor_module_fsdp.parameters(),
                                           lr=optim_config.lr,
                                           betas=optim_config.get('betas', (0.9, 0.999)),
                                           weight_decay=optim_config.get('weight_decay', 1e-2))
 
+            min_lr_ratio = optim_config.get('min_lr_ratio', 0.0)
             total_steps = optim_config.get('total_training_steps', 0)
             num_warmup_steps_ratio = optim_config.get('lr_warmup_steps_ratio', 0.)
             num_warmup_steps = int(num_warmup_steps_ratio * total_steps)
 
             print(f'Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}')
 
-            actor_lr_scheduler = get_constant_schedule_with_warmup(optimizer=actor_optimizer,
-                                                                   num_warmup_steps=num_warmup_steps)
+            lr_style = optim_config.get('lr_style', "constant")
+            if lr_style == "cosine":
+                actor_lr_scheduler = get_cosine_schedule_with_warmup(optimizer=actor_optimizer,
+                                                                     num_warmup_steps=num_warmup_steps,
+                                                                     num_training_steps=total_steps,
+                                                                     min_lr_ratio=min_lr_ratio)
+            else:
+                actor_lr_scheduler = get_constant_schedule_with_warmup(optimizer=actor_optimizer,
+                                                                       num_warmup_steps=num_warmup_steps)
         else:
             actor_optimizer = None
             actor_lr_scheduler = None
